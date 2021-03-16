@@ -10,11 +10,11 @@ jobs:
     env:
       URL: https://downloads.openwrt.org/releases/19.07.3/targets/x86/64/openwrt-sdk-19.07.3-x86-64_gcc-7.5.0_musl.Linux-x86_64.tar.xz
       REPF: ${{ github.repository }}
-      PKGN: ${{ 'openwrt-ipt2socks' }}
+      PKGN: ${{ 'ipt2socks' }}
 
     steps:
     - name: Checkout - ${{ github.ref }}
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
 
     - name: Prepare SDK ENV
       run: |
@@ -54,7 +54,7 @@ jobs:
         find bin/ -type f -name "*${PKGN}*" | xargs -t -i mv -vf {} ../bin
 
     - name: Upload - push to artifact file
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: ${{ format('{0}.{1}.{2}', github.workflow, github.actor, github.event_name) }}
         path: ../bin
