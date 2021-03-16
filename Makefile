@@ -21,6 +21,10 @@ define Package/ipt2socks
 	URL:=https://github.com/zfl9/ipt2socks
 endef
 
+define Package/ipt2socks/conffiles
+/etc/config/ipt2socks
+endef
+
 define Package/ipt2socks/description
 Utility for converting iptables (REDIRECT/TPROXY) to SOCKS5.
 endef
@@ -28,6 +32,10 @@ endef
 define Package/ipt2socks/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ipt2socks $(1)/usr/bin
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) files/ipt2socks.init $(1)/etc/init.d/ipt2socks
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_CONF) files/ipt2socks.config $(1)/etc/config/ipt2socks	
 endef
 
 $(eval $(call BuildPackage,ipt2socks))
