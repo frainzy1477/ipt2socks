@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ipt2socks
 PKG_VERSION:=1.1.3
-PKG_RELEASE:=$(SUBTARGET)
+PKG_RELEASE:=1-$(SUBTARGET)
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/zfl9/ipt2socks.git
