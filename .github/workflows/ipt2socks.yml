@@ -37,7 +37,11 @@ jobs:
         - https://downloads.openwrt.org/releases/21.02.0-rc1/targets/x86/64/openwrt-sdk-21.02.0-rc1-x86-64_gcc-8.4.0_musl.Linux-x86_64.tar.xz
         - https://downloads.openwrt.org/releases/21.02.0-rc1/targets/rockchip/armv8/openwrt-sdk-21.02.0-rc1-rockchip-armv8_gcc-8.4.0_musl.Linux-x86_64.tar.xz
     steps:
-    - uses: actions/checkout@master
+    
+    - name: Checkout - ${{ github.ref }}
+      uses: actions/checkout@v1
+      
+    #- uses: actions/checkout@master
     - name: Install env dependencies
       run: |
         sudo -E apt-get -qq update
@@ -45,34 +49,93 @@ jobs:
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean 
 
-    - name: Download Openwrt SDK
+    #- name: Download Openwrt SDK
+    #  env:
+    #    SDK_URL: ${{ matrix.SDK_URL }}
+
+    #  run: |
+    #    SDK_HOME=$(head -c -8 <<< $(basename $SDK_URL))
+    #    wget $SDK_URL
+    #    tar xf $(basename $SDK_URL) -C ~/
+    #    mv ~/$SDK_HOME ~/sdk
+        
+        
+    - name: TAG
+      run: |
+          tag_name="${GITHUB_REF##*/}"
+          echo Tag $tag_name
+          echo "TAG_NAME=${tag_name}" >> $GITHUB_ENV
+          
+    - name: Prepare SDK ENV
       env:
         SDK_URL: ${{ matrix.SDK_URL }}
-
       run: |
-        SDK_HOME=$(head -c -8 <<< $(basename $SDK_URL))
-        wget $SDK_URL
-        tar xf $(basename $SDK_URL) -C ~/
-        mv ~/$SDK_HOME ~/sdk
+        wget -q "${SDK_URL}"
+        tar xJf openwrt-sdk-*.tar.xz -C ../
+        mv -f "${GITHUB_WORKSPACE}" ../src
+        mv ../openwrt-sdk-* "${GITHUB_WORKSPACE}"
         
-    - name: Download Packages
+    - name: Prepare targets
+      env:
+        REPF: ${{ github.repository }}
       run: |
-        cd ~/sdk
-        # Pdnsd
-        git clone https://github.com/frainzy1477/ipt2socks package/ipt2socks
+        REP=$(basename "${REPF}")
+        mv -vf ../src "package/${REP}"
+        cd ~/src
         ./scripts/feeds update -a
         ./scripts/feeds install 
-
-    - name: Compile
+        
+    - name: Load custom configuration
       env:
         DEBIAN_FRONTEND: noninteractive
+        CONFIG_FILE: '.config'
+        REPF: ${{ github.repository }}
       run: |
-        cd ~/sdk
+        REP=$(basename "${REPF}")
+        [ -e "package/${REP}/${CONFIG_FILE}" ] && mv "${CONFIG}" .config
         make defconfig
-        make package/ipt2socks/compile -j$(nproc) V=s
+        
+        
+    - name: Build package
+      env:
+        DEBIAN_FRONTEND: noninteractive
+        PKGN: ${{ 'ipt2socks' }}
+      run: |
+        make package/${PKGN}/compile -j$(nproc) V=s
+        mkdir ../bin
+        find bin/ -type f -name "*${PKGN}*" | xargs -t -i mv -vf {} ../bin
+        
+   # - name: Release
+   #   uses: softprops/action-gh-release@v1
+   #   with:
+   #       draft: true
+   #       name: ${{ env.TAG_NAME }}
+   #       tag_name: ${{ env.TAG_NAME }}
+   #       files: ../bin/*.ipk
+   #  env:
+   #      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+               
+   # - name: Download Packages
+   #   run: |
+   #     cd ~/sdk
+   #     # Pdnsd
+   #     git clone https://github.com/frainzy1477/ipt2socks package/ipt2socks
+   #     ./scripts/feeds update -a
+   #     ./scripts/feeds install 
+
+
+   # - name: Compile
+   #   env:
+   #     DEBIAN_FRONTEND: noninteractive
+   #   run: |
+   #     cd ~/sdk
+   #    make defconfig
+   #   make package/ipt2socks/compile -j$(nproc) V=s
         
     - name: Upload - push to artifact file
       uses: actions/upload-artifact@v1
       with:
         name: ${{ format('{0}.{1}.{2}', github.workflow, github.actor, github.event_name) }}
-        path: ../../../sdk/bin/packages
+        #path: ../../../sdk/bin/packages
+        path: ../bin
