@@ -81,9 +81,9 @@ jobs:
       run: |
         REP=$(basename "${REPF}")
         mv -vf ../src "package/${REP}"
-        cd ~/src
-        ./scripts/feeds update -a
-        ./scripts/feeds install 
+        #cd ~/src
+        #./scripts/feeds update -a
+        #./scripts/feeds install 
         
     - name: Load custom configuration
       env:
