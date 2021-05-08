@@ -1,7 +1,7 @@
-on:
-  push:
-    branches: 
-      - master
+on: 
+  release:
+    types:
+      - created
 
 name: ipt2socks
 jobs:
@@ -41,32 +41,20 @@ jobs:
     - name: Checkout - ${{ github.ref }}
       uses: actions/checkout@v1
       
-    #- uses: actions/checkout@master
     - name: Install env dependencies
       run: |
         sudo -E apt-get -qq update
         sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion git-core gcc-multilib libelf-dev autoconf automake libtool libev-dev libc-ares-dev libudns-dev libncurses-dev
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean 
-
-    #- name: Download Openwrt SDK
-    #  env:
-    #    SDK_URL: ${{ matrix.SDK_URL }}
-
-    #  run: |
-    #    SDK_HOME=$(head -c -8 <<< $(basename $SDK_URL))
-    #    wget $SDK_URL
-    #    tar xf $(basename $SDK_URL) -C ~/
-    #    mv ~/$SDK_HOME ~/sdk
-        
-        
+    
     - name: TAG
       run: |
           tag_name="${GITHUB_REF##*/}"
           echo Tag $tag_name
           echo "TAG_NAME=${tag_name}" >> $GITHUB_ENV
           
-    - name: Prepare SDK ENV
+    - name: Download SDK
       env:
         SDK_URL: ${{ matrix.SDK_URL }}
       run: |
@@ -81,9 +69,6 @@ jobs:
       run: |
         REP=$(basename "${REPF}")
         mv -vf ../src "package/${REP}"
-        #cd ~/src
-        #./scripts/feeds update -a
-        #./scripts/feeds install 
         
     - name: Load custom configuration
       env:
@@ -94,9 +79,8 @@ jobs:
         REP=$(basename "${REPF}")
         [ -e "package/${REP}/${CONFIG_FILE}" ] && mv "${CONFIG}" .config
         make defconfig
-        
-        
-    - name: Build package
+           
+    - name: Compile Package
       env:
         DEBIAN_FRONTEND: noninteractive
         PKGN: ${{ 'ipt2socks' }}
@@ -105,37 +89,13 @@ jobs:
         mkdir ../bin
         find bin/ -type f -name "*${PKGN}*" | xargs -t -i mv -vf {} ../bin
         
-   # - name: Release
-   #   uses: softprops/action-gh-release@v1
-   #   with:
-   #       draft: true
-   #       name: ${{ env.TAG_NAME }}
-   #       tag_name: ${{ env.TAG_NAME }}
-   #       files: ../bin/*.ipk
-   #  env:
-   #      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-               
-   # - name: Download Packages
-   #   run: |
-   #     cd ~/sdk
-   #     # Pdnsd
-   #     git clone https://github.com/frainzy1477/ipt2socks package/ipt2socks
-   #     ./scripts/feeds update -a
-   #     ./scripts/feeds install 
-
-
-   # - name: Compile
-   #   env:
-   #     DEBIAN_FRONTEND: noninteractive
-   #   run: |
-   #     cd ~/sdk
-   #    make defconfig
-   #   make package/ipt2socks/compile -j$(nproc) V=s
-        
-    - name: Upload - push to artifact file
-      uses: actions/upload-artifact@v1
+    - name: Release
+      uses: softprops/action-gh-release@v1
       with:
-        name: ${{ format('{0}.{1}.{2}', github.workflow, github.actor, github.event_name) }}
-        #path: ../../../sdk/bin/packages
-        path: ../bin
+          draft: true
+          name: ${{ env.TAG_NAME }}
+          tag_name: ${{ env.TAG_NAME }}
+          files: ../bin/*.ipk
+      env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
